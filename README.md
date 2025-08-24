@@ -5,31 +5,6 @@
 
 A comprehensive Python tool for analyzing competitive Pokemon battle speed tiers. This project fetches data from Smogon University's battle statistics and generates detailed speed tier reports in both Excel and HTML formats, complete with Pokemon sprites and usage statistics.
 
-## Features
-
-### 📊 **Multi-Format Export**
-- **Excel Export**: Professional spreadsheets with dual worksheets (detailed data + summary statistics)
-- **HTML Export**: Beautiful responsive tables with Pokemon sprites and interactive elements
-- **Customizable Output**: Choose output directory and file naming conventions
-
-### 🌐 **Comprehensive Data Coverage**
-- **Multiple Formats**: VGC, Doubles OU, Singles OU, National Dex, Ubers, and 50+ competitive formats
-- **Rating Tiers**: Support for all rating thresholds (0, 1500, 1630, 1695, 1760, 1825+)
-- **Automatic Updates**: Fetches latest monthly data from Smogon and Pokemon Showdown
-- **Multilingual Support**: English and Chinese Pokemon names
-
-### 🎮 **Accurate Speed Calculations**
-- **Level-Aware**: VGC/BSS formats use level 50, others use level 100
-- **Nature Effects**: Proper handling of speed-boosting and speed-hindering natures
-- **EV/IV Integration**: Realistic stat calculations based on competitive usage patterns
-- **Usage Filtering**: Only includes speed configurations with >20% usage or most common setup
-
-### 🎨 **Professional Presentation**
-- **Pokemon Sprites**: Full sprite sheet integration for visual identification
-- **Usage Visualization**: Color-coded usage bars and statistics
-- **Responsive Design**: Mobile-friendly HTML output
-- **Clean Formatting**: Professional styling with gradient themes
-
 ## Quick Start
 
 ### Installation
@@ -120,19 +95,6 @@ python update_all_data.py
 # - Generate format name mappings
 ```
 
-## Output File Structure
-
-### Excel Export
-- **Speed Tiers Sheet**: Detailed Pokemon data with usage rates, natures, EVs, and spreads
-- **Speed Summary Sheet**: Statistical overview of each speed tier
-- **Professional Formatting**: Color-coded headers, optimized column widths, and clean styling
-
-### HTML Export
-- **Responsive Design**: Mobile-friendly tables that adapt to screen size
-- **Pokemon Sprites**: Visual Pokemon identification using official sprite sheets
-- **Interactive Elements**: Hover effects, usage visualization bars, and color-coded natures
-- **Statistics Dashboard**: Quick overview of speed tiers and Pokemon counts
-
 ## Speed Calculation Details
 
 ### Formula
@@ -178,34 +140,6 @@ pokemon-speed-tiers/
 └── README.md                  # This file
 ```
 
-## Requirements
-
-- **Python 3.7+**
-- **Dependencies**:
-  - `pandas` - Data manipulation and Excel export
-  - `openpyxl` - Excel file formatting  
-  - `pyjson5` - JSON5 parsing
-  - `requests` - HTTP requests for data fetching
-  - `beautifulsoup4` - HTML parsing for web scraping
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Development Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/lychen2/pokemon_speedtier.git
-cd pokemon_speedtier
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the tool
-python export_speed_tiers.py --list-formats
-```
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -215,10 +149,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Smogon University** - For providing comprehensive battle statistics
 - **Pokemon Showdown** - For Pokemon data and sprite resources  
 - **Game Freak/Nintendo** - For creating Pokemon (all Pokemon names and data are copyrighted by Nintendo)
-
-## Support
-
-If you encounter any issues or have feature requests, please [open an issue](https://github.com/your-username/pokemon-speed-tiers/issues) on GitHub.
 
 ---
 
