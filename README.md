@@ -36,8 +36,8 @@ A comprehensive Python tool for analyzing competitive Pokemon battle speed tiers
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/pokemon-speed-tiers.git
-cd pokemon-speed-tiers
+git clone https://github.com/lychen2/pokemon_speedtier.git
+cd pokemon_speedtier
 
 # Install dependencies
 pip install pandas openpyxl pyjson5 requests beautifulsoup4
@@ -197,7 +197,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ```bash
 # Clone the repo
 git clone https://github.com/lychen2/pokemon_speedtier.git
-cd pokemon-speed-tiers
+cd pokemon_speedtier
 
 # Install dependencies
 pip install -r requirements.txt
