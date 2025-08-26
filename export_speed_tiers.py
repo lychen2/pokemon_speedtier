@@ -2,20 +2,25 @@
 """
 Speed Tiers Excel/HTML Exporter
 独立的速度线Excel/HTML导出脚本
+Standalone speed tiers Excel/HTML export script
 
-用法:
+用法 / Usage:
 python export_speed_tiers.py [format_code] [rating_threshold] [options]
 
-例如:
+例如 / Examples:
 python export_speed_tiers.py gen9vgc2025regi 1630
 python export_speed_tiers.py gen9doublesou 1825 --translate
 python export_speed_tiers.py gen9vgc2025regi 1630 --html --translate
+python export_speed_tiers.py gen9vgc2025regi 1630 --min-usage 0.05
+python export_speed_tiers.py gen9vgc2025regi 1630 --top-n 50
 
-可选参数:
---translate, -t    使用中文翻译宝可梦名称
---output, -o       指定输出目录
---html, -h         导出为美化的HTML表格文件（包含宝可梦图标和样式）
---list-formats, -l 列出可用格式
+可选参数 / Optional Arguments:
+--translate, -t    使用中文翻译宝可梦名称 / Use Chinese translation for Pokemon names
+--output, -o       指定输出目录 / Specify output directory
+--html, -h         导出为美化的HTML表格文件（包含宝可梦图标和样式） / Export as beautiful HTML table file with Pokemon icons and styling
+--list-formats, -l 列出可用格式 / List available formats
+--min-usage, -u    最小使用率过滤器（例如：0.01 表示1%） / Minimum usage rate filter (e.g., 0.01 for 1%)
+--top-n, -n        只导出前N名使用率最高的宝可梦 / Export only top N Pokemon by usage rate
 """
 
 import os
@@ -29,10 +34,10 @@ import pandas as pd
 from openpyxl.styles import Font, Alignment, PatternFill
 import pyjson5
 
-# 数据目录
+# 数据目录 / Data directory
 DATA_DIRECTORY = "stats"
 
-# 全局变量存储数据
+# 全局变量存储数据 / Global variables for storing data
 formatDisplayNames = {}
 pokedexEntries = {}
 spriteIndex = {}
@@ -40,7 +45,7 @@ translateNames = {}
 
 
 def load_data_file(filepath, mode='r', encoding="utf8"):
-    """加载JSON/JSON5文件数据"""
+    """加载JSON/JSON5文件数据 / Load JSON/JSON5 file data"""
     if os.path.exists(filepath):
         with open(filepath, mode, encoding=encoding) as file:
             return pyjson5.loads(file.read())
@@ -48,12 +53,12 @@ def load_data_file(filepath, mode='r', encoding="utf8"):
 
 
 def build_data_path(filename):
-    """构建相对于数据目录的路径"""
+    """构建相对于数据目录的路径 / Build path relative to data directory"""
     return os.path.join(DATA_DIRECTORY, filename)
 
 
 def get_previous_year_month():
-    """获取上个月的年份和月份"""
+    """获取上个月的年份和月份 / Get previous month's year and month"""
     now = datetime.now()
     month = now.month - 1
     year = now.year
@@ -64,7 +69,7 @@ def get_previous_year_month():
 
 
 def fetch_pokemon_usage_data(format_code, rating_threshold):
-    """获取指定格式和评级的使用率数据"""
+    """获取指定格式和评级的使用率数据 / Fetch usage data for specified format and rating"""
     year, month = get_previous_year_month()
     file_name = f"{year}-{month}-{format_code}-{rating_threshold}.json"
     file_path = build_data_path(file_name)
@@ -73,7 +78,7 @@ def fetch_pokemon_usage_data(format_code, rating_threshold):
     if usage_data:
         return usage_data.get("data", {})
     
-    # 回退到前一个月
+    # 回退到前一个月 / Fallback to previous month
     previous_month = int(month) - 1
     previous_year = int(year)
     if previous_month == 0:
@@ -89,23 +94,23 @@ def fetch_pokemon_usage_data(format_code, rating_threshold):
 
 
 def fuzzy_match(target, options):
-    """使用模糊匹配找到最相似的选项"""
+    """使用模糊匹配找到最相似的选项 / Use fuzzy matching to find most similar option"""
     normalized_options = {option.lower(): option for option in options}
     matches = difflib.get_close_matches(target.lower(), normalized_options.keys(), 10)
     return normalized_options[matches[0]] if matches else None
 
 
 def calculate_stat_value(base, iv, ev, level, multiplier):
-    """计算非HP属性值"""
+    """计算非HP属性值 / Calculate non-HP stat value"""
     return math.floor((math.floor((2 * base + iv + math.floor(ev / 4)) * level / 100) + 5) * multiplier)
 
 
-def calculate_speed_tiers(usage_data, format_code=""):
-    """计算速度线数据"""
+def calculate_speed_tiers(usage_data, format_code="", min_usage_filter=None, top_n_filter=None):
+    """计算速度线数据 / Calculate speed tier data"""
     speed_tiers = {}
     level = 50 if (("vgc" in format_code.lower()) or ("bss" in format_code.lower())) else 100
     
-    # 速度相关性格
+    # 速度相关性格 / Speed-related natures
     speed_boost_natures = ["Timid", "Hasty", "Jolly", "Naive"]
     speed_nerf_natures = ["Brave", "Relaxed", "Quiet", "Sassy"]
     
@@ -113,7 +118,7 @@ def calculate_speed_tiers(usage_data, format_code=""):
         if pokemon_name == "ALL Pokemon":
             continue
             
-        # 获取该宝可梦的种族值
+        # 获取该宝可梦的种族值 / Get this Pokemon's base stats
         matched_name = fuzzy_match(pokemon_name, pokedexEntries.keys())
         if not matched_name:
             continue
@@ -124,7 +129,7 @@ def calculate_speed_tiers(usage_data, format_code=""):
         if not spreads:
             continue
         
-        # 计算所有配招的速度值并找到最常见的速度
+        # 计算所有配招的速度值并找到最常见的速度 / Calculate speed values for all spreads and find most common speeds
         speed_frequencies = {}
         total_spread_usage = sum(spreads.values())
         
@@ -132,9 +137,9 @@ def calculate_speed_tiers(usage_data, format_code=""):
             parts = spread.split(':')
             nature = parts[0]
             evs = list(map(int, parts[1].split('/')))
-            speed_evs = evs[5]  # 速度是第6个属性值(索引5)
+            speed_evs = evs[5]  # 速度是第6个属性值(索引5) / Speed is the 6th stat (index 5)
             
-            # 基于性格计算速度倍率
+            # 基于性格计算速度倍率 / Calculate speed multiplier based on nature
             if nature in speed_boost_natures:
                 multiplier = 1.1
             elif nature in speed_nerf_natures:
@@ -142,13 +147,13 @@ def calculate_speed_tiers(usage_data, format_code=""):
             else:
                 multiplier = 1.0
                 
-            # 如果速度被降低且没有努力值则使用0个体，否则使用31个体
+            # 如果速度被降低且没有努力值则使用0个体，否则使用31个体 / Use 0 IV if speed is hindered and no EVs, otherwise use 31 IV
             speed_iv = 0 if (multiplier == 0.9 and speed_evs == 0) else 31
             
-            # 计算最终速度值
+            # 计算最终速度值 / Calculate final speed value
             speed_value = calculate_stat_value(base_speed, speed_iv, speed_evs, level, multiplier)
             
-            # 记录速度频率和配招细节
+            # 记录速度频率和配招细节 / Record speed frequency and spread details
             if speed_value not in speed_frequencies:
                 speed_frequencies[speed_value] = {
                     'total_usage': 0,
@@ -163,35 +168,35 @@ def calculate_speed_tiers(usage_data, format_code=""):
                 'usage': spread_usage
             })
         
-        # 确定该宝可梦要包含哪些速度
+        # 确定该宝可梦要包含哪些速度 / Determine which speeds to include for this Pokemon
         if speed_frequencies:
             usage_weight = pokemon_data.get("usage", 0)
             
-            # 计算每个速度的百分比
+            # 计算每个速度的百分比 / Calculate percentage for each speed
             speeds_with_percentages = []
             for speed_value, speed_data in speed_frequencies.items():
                 percentage = (speed_data['total_usage'] / total_spread_usage) * 100
                 speeds_with_percentages.append((speed_value, speed_data, percentage))
             
-            # 找到使用率>20%的速度
+            # 找到使用率>20%的速度 / Find speeds with usage > 20%
             high_usage_speeds = [(speed, data, perc) for speed, data, perc in speeds_with_percentages if perc > 20]
             
-            # 如果多个速度使用率>20%则全部包含，否则只包含最常见的速度
+            # 如果多个速度使用率>20%则全部包含，否则只包含最常见的速度 / If multiple speeds > 20% usage include all, otherwise include only most common
             if len(high_usage_speeds) > 1:
                 speeds_to_include = high_usage_speeds
             else:
-                # 只包含最常见的速度
+                # 只包含最常见的速度 / Include only most common speed
                 most_common_speed = max(speed_frequencies.keys(), key=lambda x: speed_frequencies[x]['total_usage'])
                 most_common_data = speed_frequencies[most_common_speed]
                 most_common_percentage = (most_common_data['total_usage'] / total_spread_usage) * 100
                 speeds_to_include = [(most_common_speed, most_common_data, most_common_percentage)]
             
-            # 将每个选定的速度添加到速度线中
+            # 将每个选定的速度添加到速度线中 / Add each selected speed to speed tiers
             for speed_value, speed_data, speed_percentage in speeds_to_include:
-                # 找到实现该速度的最常见配招
+                # 找到实现该速度的最常见配招 / Find most common spread that achieves this speed
                 most_common_spread_for_speed = max(speed_data['spreads'], key=lambda x: x['usage'])
                 
-                # 存储到速度线中
+                # 存储到速度线中 / Store in speed tiers
                 if speed_value not in speed_tiers:
                     speed_tiers[speed_value] = []
                     
@@ -205,11 +210,11 @@ def calculate_speed_tiers(usage_data, format_code=""):
                     'speed_usage_ratio': speed_percentage / 100
                 })
     
-    # 在每个速度线内按使用率排序
+    # 在每个速度线内按使用率排序 / Sort by usage within each speed tier
     for speed_value in speed_tiers:
         speed_tiers[speed_value].sort(key=lambda x: x['usage'], reverse=True)
     
-    # 转换为模板友好的排序列表格式
+    # 转换为模板友好的排序列表格式 / Convert to template-friendly sorted list format
     sorted_speed_tiers = []
     for speed_value in sorted(speed_tiers.keys(), reverse=True):
         tier_pokemon = speed_tiers[speed_value]
@@ -220,20 +225,59 @@ def calculate_speed_tiers(usage_data, format_code=""):
             'total_usage': sum(p['usage'] for p in tier_pokemon)
         })
     
+    # 应用过滤条件 / Apply filters
+    if min_usage_filter is not None or top_n_filter is not None:
+        # 收集所有宝可梦记录用于过滤 / Collect all Pokemon records for filtering
+        all_pokemon_records = []
+        for tier in sorted_speed_tiers:
+            for pokemon in tier['pokemon_list']:
+                all_pokemon_records.append((pokemon, tier['speed']))
+        
+        # 按使用率排序 / Sort by usage rate
+        all_pokemon_records.sort(key=lambda x: x[0]['usage'], reverse=True)
+        
+        # 应用过滤条件 / Apply filters
+        filtered_records = all_pokemon_records
+        
+        if min_usage_filter is not None:
+            filtered_records = [(pokemon, speed) for pokemon, speed in filtered_records 
+                              if pokemon['usage'] >= min_usage_filter]
+        
+        if top_n_filter is not None:
+            filtered_records = filtered_records[:top_n_filter]
+        
+        # 重新构建速度线结构 / Rebuild speed tier structure
+        filtered_speed_tiers = {}
+        for pokemon, speed_value in filtered_records:
+            if speed_value not in filtered_speed_tiers:
+                filtered_speed_tiers[speed_value] = []
+            filtered_speed_tiers[speed_value].append(pokemon)
+        
+        # 转换为最终格式 / Convert to final format
+        sorted_speed_tiers = []
+        for speed_value in sorted(filtered_speed_tiers.keys(), reverse=True):
+            tier_pokemon = filtered_speed_tiers[speed_value]
+            
+            sorted_speed_tiers.append({
+                'speed': speed_value,
+                'pokemon_list': tier_pokemon,
+                'total_usage': sum(p['usage'] for p in tier_pokemon)
+            })
+    
     return sorted_speed_tiers
 
 
 def load_all_data(use_translation=False):
-    """加载所有必要的数据文件"""
+    """加载所有必要的数据文件 / Load all necessary data files"""
     global formatDisplayNames, pokedexEntries, translateNames
     
-    # 加载格式显示名称
+    # 加载格式显示名称 / Load format display names
     formatDisplayNames = load_data_file(build_data_path("meta_names.json")) or {}
     
-    # 加载宝可梦图鉴数据
+    # 加载宝可梦图鉴数据 / Load Pokemon pokedex data
     pokedexEntries = load_data_file(build_data_path("pokedex.json")) or {}
     
-    # 如果需要翻译则加载翻译文件
+    # 如果需要翻译则加载翻译文件 / Load translation file if needed
     if use_translation:
         translateNames = load_data_file("translate.json") or {}
         print(f"Loaded {len(translateNames)} Pokemon translations")
@@ -245,15 +289,15 @@ def load_all_data(use_translation=False):
 
 
 def translate_pokemon_name(pokemon_name):
-    """翻译宝可梦名称为中文（如果可用）"""
+    """翻译宝可梦名称为中文（如果可用） / Translate Pokemon name to Chinese (if available)"""
     if translateNames and pokemon_name in translateNames:
         return translateNames[pokemon_name]
     return pokemon_name
 
 
 def get_pokemon_sprite_info(pokemon_name):
-    """获取宝可梦图标信息，使用与app.py相同的逻辑"""
-    # 加载图标索引（如果还未加载）
+    """获取宝可梦图标信息，使用与app.py相同的逻辑 / Get Pokemon sprite info using same logic as app.py"""
+    # 加载图标索引（如果还未加载） / Load sprite index (if not already loaded)
     global spriteIndex
     if not spriteIndex:
         spriteIndex = load_data_file(build_data_path("forms_index.json")) or {}
@@ -261,7 +305,7 @@ def get_pokemon_sprite_info(pokemon_name):
     if pokemon_name == "ALL Pokemon":
         return {'x': 0, 'y': 0, 'w': 40, 'h': 30}
     
-    # 标准化宝可梦名称（与app.py中get_pokemon_sprite函数相同）
+    # 标准化宝可梦名称（与app.py中get_pokemon_sprite函数相同） / Normalize Pokemon name (same as get_pokemon_sprite function in app.py)
     word = pokemon_name.lower()
     word = re.sub(r'[^a-z0-9]+', '', word)
     
@@ -271,7 +315,7 @@ def get_pokemon_sprite_info(pokemon_name):
     elif word in pokedexEntries.keys():
         sprite_num = pokedexEntries[word].get("num", 0)
     
-    # 计算sprite坐标 (每行12个sprite，每个sprite 40x30像素)
+    # 计算sprite坐标 (每行12个sprite，每个sprite 40x30像素) / Calculate sprite coordinates (12 sprites per row, each sprite 40x30 pixels)
     row, col = divmod(sprite_num, 12)
     x = col * 40
     y = row * 30
@@ -280,19 +324,19 @@ def get_pokemon_sprite_info(pokemon_name):
 
 
 def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="."):
-    """导出速度线数据到美化的HTML表格文件"""
+    """导出速度线数据到美化的HTML表格文件 / Export speed tier data to beautiful HTML table file"""
     if not speed_tiers_list:
         print("Error: No speed tier data to export")
         return None
     
-    # 生成文件名
+    # 生成文件名 / Generate filename
     format_display_name = formatDisplayNames.get(format_code, format_code)
     clean_format_name = re.sub(r'[^\w\-_\.]', '_', format_display_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"Speed_Tiers_{clean_format_name}_{rating_threshold}_{timestamp}.html"
     filepath = os.path.join(output_dir, filename)
     
-    # HTML模板
+    # HTML模板 / HTML template
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -532,14 +576,14 @@ def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="
                 <tbody>
 """
     
-    # 计算最大使用率以进行比例缩放
+    # 计算最大使用率以进行比例缩放 / Calculate max usage for proportional scaling
     max_usage = max(pokemon['usage'] for tier in speed_tiers_list for pokemon in tier['pokemon_list']) if speed_tiers_list else 1
     
-    # 速度相关性格
+    # 速度相关性格 / Speed-related natures
     speed_boost_natures = ["Timid", "Hasty", "Jolly", "Naive"]
     speed_nerf_natures = ["Brave", "Relaxed", "Quiet", "Sassy"]
     
-    # 生成表格行
+    # 生成表格行 / Generate table rows
     for tier in speed_tiers_list:
         speed_value = tier['speed']
         
@@ -547,11 +591,11 @@ def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="
             translated_name = translate_pokemon_name(pokemon['name'])
             sprite_info = get_pokemon_sprite_info(pokemon['name'])
             
-            # 计算使用率百分比和条形图宽度
+            # 计算使用率百分比和条形图宽度 / Calculate usage percentage and bar width
             usage_percent = pokemon['usage'] * 100
             usage_width = min((pokemon['usage'] / max_usage) * 100, 100)
             
-            # 性格颜色类
+            # 性格颜色类 / Nature color class
             nature = pokemon['nature']
             if nature in speed_boost_natures:
                 nature_class = 'nature-positive'
@@ -560,7 +604,7 @@ def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="
             else:
                 nature_class = 'nature-neutral'
             
-            # 第一个宝可梦显示速度值，其他显示空
+            # 第一个宝可梦显示速度值，其他显示空 / First Pokemon shows speed value, others show empty
             speed_cell = f'<td class="speed-tier">{speed_value}</td>' if i == 0 else '<td></td>'
             
             html_content += f"""
@@ -593,7 +637,7 @@ def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="
 </body>
 </html>"""
     
-    # 写入文件
+    # 写入文件 / Write to file
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(html_content)
@@ -605,12 +649,12 @@ def export_to_html(speed_tiers_list, format_code, rating_threshold, output_dir="
 
 
 def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir="."):
-    """导出速度线数据到Excel文件"""
+    """导出速度线数据到Excel文件 / Export speed tier data to Excel file"""
     if not speed_tiers_list:
         print("Error: No speed tier data to export")
         return None
     
-    # 创建Excel数据结构
+    # 创建Excel数据结构 / Create Excel data structure
     excel_data = []
     
     for tier in speed_tiers_list:
@@ -629,26 +673,26 @@ def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir=
                 'Speed Usage Ratio (%)': round(pokemon['speed_usage_ratio'] * 100, 1)
             })
     
-    # 创建DataFrame
+    # 创建DataFrame / Create DataFrame
     df = pd.DataFrame(excel_data)
     
-    # 生成文件名
+    # 生成文件名 / Generate filename
     format_display_name = formatDisplayNames.get(format_code, format_code)
     clean_format_name = re.sub(r'[^\w\-_\.]', '_', format_display_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"Speed_Tiers_{clean_format_name}_{rating_threshold}_{timestamp}.xlsx"
     filepath = os.path.join(output_dir, filename)
     
-    # 创建Excel文件
+    # 创建Excel文件 / Create Excel file
     with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-        # 写入主数据表
+        # 写入主数据表 / Write main data sheet
         df.to_excel(writer, sheet_name='Speed Tiers', index=False)
         
-        # 获取工作簿和工作表
+        # 获取工作簿和工作表 / Get workbook and worksheet
         workbook = writer.book
         worksheet = writer.sheets['Speed Tiers']
         
-        # 设置列宽
+        # 设置列宽 / Set column widths
         column_widths = {
             'A': 8,   # Speed
             'B': 20,  # Pokemon
@@ -663,7 +707,7 @@ def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir=
         for column, width in column_widths.items():
             worksheet.column_dimensions[column].width = width
         
-        # 添加标题格式
+        # 添加标题格式 / Add header formatting
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
         header_alignment = Alignment(horizontal="center", vertical="center")
@@ -673,7 +717,7 @@ def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir=
             cell.fill = header_fill
             cell.alignment = header_alignment
         
-        # 创建汇总表
+        # 创建汇总表 / Create summary sheet
         summary_data = []
         for tier in speed_tiers_list:
             top_pokemon_name = tier['pokemon_list'][0]['name'] if tier['pokemon_list'] else ''
@@ -688,7 +732,7 @@ def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir=
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_excel(writer, sheet_name='Speed Summary', index=False)
         
-        # 格式化汇总表
+        # 格式化汇总表 / Format summary sheet
         summary_ws = writer.sheets['Speed Summary']
         summary_column_widths = {
             'A': 8,   # Speed
@@ -710,7 +754,7 @@ def export_to_excel(speed_tiers_list, format_code, rating_threshold, output_dir=
 
 
 def get_available_formats():
-    """获取可用的格式列表"""
+    """获取可用的格式列表 / Get list of available formats"""
     if not os.path.exists(DATA_DIRECTORY):
         return []
     
@@ -728,7 +772,7 @@ def get_available_formats():
 
 
 def get_available_ratings(format_code):
-    """获取指定格式的可用评级列表"""
+    """获取指定格式的可用评级列表 / Get list of available ratings for specified format"""
     if not os.path.exists(DATA_DIRECTORY):
         return []
     
@@ -738,7 +782,7 @@ def get_available_ratings(format_code):
 
 
 def main():
-    """主函数"""
+    """主函数 / Main function"""
     parser = argparse.ArgumentParser(description="Export Pokemon battle speed tiers to Excel or HTML file")
     parser.add_argument("format", nargs='?', help="Format code (e.g.: gen9vgc2025regi)")
     parser.add_argument("rating", nargs='?', help="Rating threshold (e.g.: 1630)")
@@ -746,14 +790,16 @@ def main():
     parser.add_argument("--list-formats", "-l", action="store_true", help="List available formats")
     parser.add_argument("--translate", "-t", action="store_true", help="Use Chinese translation for Pokemon names")
     parser.add_argument("--html", "-H", action="store_true", help="Export as beautiful HTML table file (with Pokemon icons)")
+    parser.add_argument("--min-usage", "-u", type=float, help="Minimum usage rate threshold (e.g., 0.01 for 1%%)")
+    parser.add_argument("--top-n", "-n", type=int, help="Export only top N Pokemon by usage rate")
     
     args = parser.parse_args()
     
-    # 加载数据
+    # 加载数据 / Load data
     print("Loading data...")
     load_all_data(use_translation=args.translate)
     
-    # 如果请求列出格式
+    # 如果请求列出格式 / If requesting to list formats
     if args.list_formats:
         formats = get_available_formats()
         print("\nAvailable formats:")
@@ -762,34 +808,38 @@ def main():
             print(f"  {code:<20} - {name} (Ratings: {', '.join(ratings)})")
         return
     
-    # 如果没有提供参数，显示帮助
+    # 如果没有提供参数，显示帮助 / If no arguments provided, show help
     if not args.format:
         print("Please provide format code, or use --list-formats to view available formats")
         print("Use --translate to enable Chinese translation")
         print("Use --html to export as beautiful HTML table file (with Pokemon icons)")
-        formats = get_available_formats()[:5]  # 显示前5个格式作为示例
+        print("Use --min-usage to filter Pokemon with minimum usage rate")
+        print("Use --top-n to export only top N Pokemon by usage rate")
+        formats = get_available_formats()[:5]  # 显示前5个格式作为示例 / Show first 5 formats as examples
         print("\nExample formats:")
         for code, name in formats:
             print(f"  {code} - {name}")
         print("\nExample usage:")
         print("  python export_speed_tiers.py gen9vgc2025regi 1630 --translate")
         print("  python export_speed_tiers.py gen9vgc2025regi 1630 --html --translate")
+        print("  python export_speed_tiers.py gen9vgc2025regi 1630 --min-usage 0.05")
+        print("  python export_speed_tiers.py gen9vgc2025regi 1630 --top-n 50")
         return
     
     format_code = args.format
     
-    # 获取评级阈值
+    # 获取评级阈值 / Get rating threshold
     if not args.rating:
         available_ratings = get_available_ratings(format_code)
         if not available_ratings:
             print(f"Error: No data files found for format '{format_code}'")
             return
-        rating_threshold = available_ratings[-1]  # 使用最高评级
+        rating_threshold = available_ratings[-1]  # 使用最高评级 / Use highest rating
         print(f"Rating not specified, using highest rating: {rating_threshold}")
     else:
         rating_threshold = args.rating
     
-    # 验证格式和评级
+    # 验证格式和评级 / Validate format and rating
     available_ratings = get_available_ratings(format_code)
     if not available_ratings:
         print(f"错误: 格式 '{format_code}' 没有找到数据文件")
@@ -800,7 +850,7 @@ def main():
         print(f"Available ratings: {', '.join(available_ratings)}")
         return
     
-    # 获取使用率数据
+    # 获取使用率数据 / Get usage data
     print(f"Getting usage data for {format_code} (rating {rating_threshold}+)...")
     usage_data = fetch_pokemon_usage_data(format_code, rating_threshold)
     
@@ -810,9 +860,13 @@ def main():
     
     print(f"Loaded data for {len(usage_data)} Pokemon")
     
-    # 计算速度线
+    # 计算速度线 / Calculate speed tiers
     print("Calculating speed tiers...")
-    speed_tiers_list = calculate_speed_tiers(usage_data, format_code)
+    if args.min_usage:
+        print(f"Applying minimum usage filter: {args.min_usage * 100:.2f}%")
+    if args.top_n:
+        print(f"Applying top N filter: {args.top_n} Pokemon")
+    speed_tiers_list = calculate_speed_tiers(usage_data, format_code, args.min_usage, args.top_n)
     
     if not speed_tiers_list:
         print("Error: No speed tier data calculated")
@@ -820,7 +874,7 @@ def main():
     
     print(f"Calculated {len(speed_tiers_list)} speed tiers")
     
-    # 选择导出格式并导出文件
+    # 选择导出格式并导出文件 / Choose export format and export file
     if args.html:
         print("Exporting HTML file...")
         if args.translate and translateNames:

@@ -52,6 +52,22 @@ python export_speed_tiers.py gen9ou 1695
 python export_speed_tiers.py gen9nationaldex 1760
 ```
 
+### Filtering Options
+
+```bash
+# Export only Pokemon with usage rate >= 5%
+python export_speed_tiers.py gen9vgc2025regi 1630 --min-usage 0.05
+
+# Export only top 50 Pokemon by usage rate
+python export_speed_tiers.py gen9vgc2025regi 1630 --top-n 50
+
+# Combine filters: top 30 Pokemon with minimum 2% usage rate
+python export_speed_tiers.py gen9vgc2025regi 1630 --top-n 30 --min-usage 0.02
+
+# HTML output with filters and Chinese translation
+python export_speed_tiers.py gen9vgc2025regi 1630 --html --translate --min-usage 0.03
+```
+
 ### Output Formats
 
 ```bash
@@ -79,6 +95,8 @@ python export_speed_tiers.py gen9vgc2025regi 1630 --output ./reports/
 | `--html, -H` | Export as HTML with Pokemon sprites (default: Excel) |
 | `--translate, -t` | Use Chinese Pokemon names |
 | `--output, -o [DIR]` | Specify output directory (default: current directory) |
+| `--min-usage, -u [FLOAT]` | Filter Pokemon by minimum usage rate (e.g., 0.05 for 5%) |
+| `--top-n, -n [INT]` | Export only top N Pokemon by usage rate |
 | `--help` | Show detailed help message |
 
 ### Data Management (`update_all_data.py`)
